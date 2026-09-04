@@ -1,0 +1,355 @@
+package com.example.phonestore
+
+import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.google.firebase.auth.FirebaseAuth
+
+@Composable
+fun LoginScreen(
+    onLoginSuccess: () -> Unit,
+    onRegisterClick: () -> Unit
+) {
+
+    val context = LocalContext.current
+
+    var email by remember {
+        mutableStateOf("")
+    }
+
+    var password by remember {
+        mutableStateOf("")
+    }
+
+    var loading by remember {
+        mutableStateOf(false)
+    }
+
+    // =========================
+    // MÀU GIAO DIỆN
+    // =========================
+
+    val primaryBlue = Color(0xFF1565C0)
+    val darkBlue = Color(0xFF0D47A1)
+    val lightBlue = Color(0xFFE3F2FD)
+    val textDark = Color(0xFF17202A)
+    val textGray = Color(0xFF6B7280)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        lightBlue,
+                        Color.White,
+                        Color.White
+                    )
+                )
+            )
+    ) {
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(
+                    horizontal = 28.dp,
+                    vertical = 30.dp
+                ),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+
+            // =========================
+            // LOGO
+            // =========================
+
+            Box(
+                modifier = Modifier
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                primaryBlue,
+                                darkBlue
+                            )
+                        ),
+                        shape = RoundedCornerShape(22.dp)
+                    )
+                    .padding(
+                        horizontal = 24.dp,
+                        vertical = 18.dp
+                    )
+            ) {
+
+                Text(
+                    text = "PHONE",
+                    color = Color.White,
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 2.sp
+                )
+            }
+
+            Spacer(
+                modifier = Modifier.height(20.dp)
+            )
+
+            Text(
+                text = "PHONE STORE",
+                color = textDark,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(
+                modifier = Modifier.height(6.dp)
+            )
+
+            Text(
+                text = "Cửa hàng điện thoại chính hãng",
+                color = textGray,
+                fontSize = 14.sp
+            )
+
+            Spacer(
+                modifier = Modifier.height(32.dp)
+            )
+
+            // =========================
+            // EMAIL
+            // =========================
+
+            OutlinedTextField(
+                value = email,
+                onValueChange = {
+                    email = it
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp),
+                label = {
+                    Text("Email")
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Email,
+                        contentDescription = "Email"
+                    )
+                },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = primaryBlue,
+                    unfocusedBorderColor = Color(0xFFD1D5DB),
+                    focusedLabelColor = primaryBlue,
+                    cursorColor = primaryBlue
+                )
+            )
+
+            Spacer(
+                modifier = Modifier.height(16.dp)
+            )
+
+            // =========================
+            // PASSWORD
+            // =========================
+
+            OutlinedTextField(
+                value = password,
+                onValueChange = {
+                    password = it
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp),
+                label = {
+                    Text("Mật khẩu")
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = "Mật khẩu"
+                    )
+                },
+                visualTransformation =
+                    PasswordVisualTransformation(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = primaryBlue,
+                    unfocusedBorderColor = Color(0xFFD1D5DB),
+                    focusedLabelColor = primaryBlue,
+                    cursorColor = primaryBlue
+                )
+            )
+
+            Spacer(
+                modifier = Modifier.height(28.dp)
+            )
+
+            // =========================
+            // LOGIN BUTTON
+            // =========================
+
+            Button(
+                onClick = {
+
+                    if (email.isBlank()) {
+
+                        Toast.makeText(
+                            context,
+                            "Vui lòng nhập email",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        return@Button
+                    }
+
+                    if (password.isBlank()) {
+
+                        Toast.makeText(
+                            context,
+                            "Vui lòng nhập mật khẩu",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        return@Button
+                    }
+
+                    loading = true
+
+                    FirebaseAuth
+                        .getInstance()
+                        .signInWithEmailAndPassword(
+                            email.trim(),
+                            password
+                        )
+                        .addOnCompleteListener { task ->
+
+                            loading = false
+
+                            if (task.isSuccessful) {
+
+                                Toast.makeText(
+                                    context,
+                                    "Đăng nhập thành công",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+
+                                onLoginSuccess()
+
+                            } else {
+
+                                Toast.makeText(
+                                    context,
+                                    "Email hoặc mật khẩu không đúng",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                },
+                enabled = !loading,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = primaryBlue,
+                    disabledContainerColor = Color(0xFF90CAF9)
+                )
+            ) {
+
+                if (loading) {
+
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .height(22.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+
+                    Spacer(
+                        modifier = Modifier
+                            .padding(horizontal = 5.dp)
+                    )
+
+                    Text(
+                        text = "Đang đăng nhập..."
+                    )
+
+                } else {
+
+                    Text(
+                        text = "ĐĂNG NHẬP",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(
+                modifier = Modifier.height(16.dp)
+            )
+
+            // =========================
+            // REGISTER
+            // =========================
+
+            TextButton(
+                onClick = onRegisterClick
+            ) {
+
+                Text(
+                    text = "Chưa có tài khoản? ",
+                    color = textGray
+                )
+
+                Text(
+                    text = "Đăng ký ngay",
+                    color = primaryBlue,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(
+                modifier = Modifier.height(12.dp)
+            )
+
+            Text(
+                text = "© 2026 Phone Store",
+                color = Color(0xFF9CA3AF),
+                fontSize = 12.sp
+            )
+        }
+    }
+}
