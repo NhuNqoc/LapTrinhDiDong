@@ -1,0 +1,457 @@
+package com.example.phonestore
+
+import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+
+@Composable
+fun CheckoutScreen(
+    cartItems: List<CartItem>,
+    onBack: () -> Unit,
+    onOrderSuccess: () -> Unit
+) {
+
+    val context = LocalContext.current
+    val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+
+    var fullName by remember { mutableStateOf("") }
+    var phoneNumber by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
+    var paymentMethod by remember { mutableStateOf("COD") }
+    var loading by remember { mutableStateOf(false) }
+
+    val totalPrice = cartItems.sumOf { item ->
+
+        val price = item.phone.price
+            .replace(".", "")
+            .replace("đ", "")
+            .replace(",", "")
+            .trim()
+            .toLongOrNull() ?: 0L
+
+        price * item.quantity
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF5F7FB))
+    ) {
+
+        // HEADER
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF2563EB))
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+
+            IconButton(
+                onClick = {
+                    if (!loading) {
+                        onBack()
+                    }
+                }
+            ) {
+
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Quay lại",
+                    tint = Color.White
+                )
+            }
+
+            Text(
+                text = "Thanh toán",
+                color = Color.White,
+                fontSize = 21.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp)
+        ) {
+
+            // THÔNG TIN NHẬN HÀNG
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                )
+            ) {
+
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+
+                    Text(
+                        text = "Thông tin nhận hàng",
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = fullName,
+                        onValueChange = { fullName = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Họ và tên") },
+                        singleLine = true,
+                        enabled = !loading
+                    )
+
+                    Spacer(Modifier.height(10.dp))
+
+                    OutlinedTextField(
+                        value = phoneNumber,
+                        onValueChange = {
+                            if (
+                                it.length <= 11 &&
+                                it.all { c -> c.isDigit() }
+                            ) {
+                                phoneNumber = it
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Số điện thoại") },
+                        singleLine = true,
+                        enabled = !loading
+                    )
+
+                    Spacer(Modifier.height(10.dp))
+
+                    OutlinedTextField(
+                        value = address,
+                        onValueChange = { address = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Địa chỉ nhận hàng") },
+                        minLines = 3,
+                        enabled = !loading
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // THANH TOÁN
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                )
+            ) {
+
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+
+                    Text(
+                        text = "Phương thức thanh toán",
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        RadioButton(
+                            selected = paymentMethod == "COD",
+                            onClick = {
+                                if (!loading) {
+                                    paymentMethod = "COD"
+                                }
+                            }
+                        )
+
+                        Text("Thanh toán khi nhận hàng")
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        RadioButton(
+                            selected = paymentMethod == "BANK",
+                            onClick = {
+                                if (!loading) {
+                                    paymentMethod = "BANK"
+                                }
+                            }
+                        )
+
+                        Text("Chuyển khoản ngân hàng")
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // TỔNG TIỀN
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                )
+            ) {
+
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+
+                    Text(
+                        text = "Tổng đơn hàng",
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement =
+                            Arrangement.SpaceBetween
+                    ) {
+
+                        Text("Số lượng")
+
+                        Text(
+                            cartItems.sumOf {
+                                it.quantity
+                            }.toString(),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement =
+                            Arrangement.SpaceBetween
+                    ) {
+
+                        Text(
+                            text = "Tổng tiền",
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Text(
+                            text = formatCheckoutPrice(totalPrice),
+                            color = Color(0xFFDC2626),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(22.dp))
+
+            // XÁC NHẬN
+            Button(
+                onClick = {
+
+                    if (fullName.isBlank()) {
+                        Toast.makeText(
+                            context,
+                            "Vui lòng nhập họ và tên",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@Button
+                    }
+
+                    if (phoneNumber.length < 9) {
+                        Toast.makeText(
+                            context,
+                            "Số điện thoại không hợp lệ",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@Button
+                    }
+
+                    if (address.isBlank()) {
+                        Toast.makeText(
+                            context,
+                            "Vui lòng nhập địa chỉ",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@Button
+                    }
+
+                    if (cartItems.isEmpty()) {
+                        Toast.makeText(
+                            context,
+                            "Giỏ hàng đang trống",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@Button
+                    }
+
+                    val user = auth.currentUser
+
+                    if (user == null) {
+                        Toast.makeText(
+                            context,
+                            "Bạn chưa đăng nhập",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@Button
+                    }
+
+                    loading = true
+
+                    // LƯU THÔNG TIN TỪNG SẢN PHẨM
+                    val productList = cartItems.map { item ->
+
+                        hashMapOf(
+                            "name" to item.phone.name,
+                            "price" to item.phone.price,
+                            "quantity" to item.quantity
+                        )
+                    }
+
+                    val orderData =
+                        hashMapOf<String, Any>(
+
+                            "userId" to user.uid,
+
+                            "customerName" to
+                                    fullName.trim(),
+
+                            "email" to
+                                    (user.email ?: ""),
+
+                            "phoneNumber" to
+                                    phoneNumber.trim(),
+
+                            "address" to
+                                    address.trim(),
+
+                            "paymentMethod" to
+                                    paymentMethod,
+
+                            "totalPrice" to
+                                    totalPrice,
+
+                            "status" to
+                                    "PENDING",
+
+                            "createdAt" to
+                                    System.currentTimeMillis(),
+
+                            "items" to
+                                    productList
+                        )
+
+                    db.collection("orders")
+                        .add(orderData)
+                        .addOnSuccessListener { document ->
+
+                            loading = false
+
+                            Toast.makeText(
+                                context,
+                                "Đặt hàng thành công!\nMã đơn: ${
+                                    document.id.take(8)
+                                }",
+                                Toast.LENGTH_LONG
+                            ).show()
+
+                            onOrderSuccess()
+                        }
+                        .addOnFailureListener { error ->
+
+                            loading = false
+
+                            Toast.makeText(
+                                context,
+                                "Không thể lưu đơn hàng:\n${error.message}",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                },
+
+                enabled = !loading,
+
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+
+                shape = RoundedCornerShape(14.dp)
+            ) {
+
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null
+                )
+
+                Text(
+                    text = if (loading) {
+                        "ĐANG LƯU ĐƠN..."
+                    } else {
+                        "XÁC NHẬN ĐẶT HÀNG"
+                    },
+                    modifier = Modifier.padding(start = 8.dp),
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(Modifier.height(25.dp))
+        }
+    }
+}
+
+private fun formatCheckoutPrice(
+    price: Long
+): String {
+
+    return String
+        .format("%,dđ", price)
+        .replace(",", ".")
+}
