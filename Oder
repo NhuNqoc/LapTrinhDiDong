@@ -1,0 +1,1341 @@
+package com.example.phonestore
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.ShoppingBag
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FirebaseFirestore
+
+// ======================================================
+// CHỈ MODEL ĐƠN HÀNG
+// KHÔNG CÓ AdminProductModel
+// KHÔNG CÓ AdminProductScreen
+// ======================================================
+
+private data class AdminOrderItem(
+    val id: String,
+    val customerName: String,
+    val phone: String,
+    val address: String,
+    val total: String,
+    val status: String,
+    val createdAt: String
+)
+
+// ======================================================
+// ADMIN ORDER SCREEN
+// ======================================================
+
+@Composable
+fun AdminOrderScreen(
+    onLogout: () -> Unit,
+    onManageProducts: () -> Unit
+) {
+
+    val db = remember {
+        FirebaseFirestore.getInstance()
+    }
+
+    var orders by remember {
+        mutableStateOf<List<AdminOrderItem>>(emptyList())
+    }
+
+    var loading by remember {
+        mutableStateOf(true)
+    }
+
+    var refreshing by remember {
+        mutableStateOf(false)
+    }
+
+    var errorMessage by remember {
+        mutableStateOf("")
+    }
+
+    var deleteOrder by remember {
+        mutableStateOf<AdminOrderItem?>(null)
+    }
+
+    // ==================================================
+    // ĐỌC TEXT AN TOÀN
+    // ==================================================
+
+    fun readText(
+        document: DocumentSnapshot,
+        vararg fields: String
+    ): String {
+
+        for (field in fields) {
+
+            val value = document.get(field)
+
+            if (value != null) {
+
+                return when (value) {
+
+                    is String ->
+                        value
+
+                    is Number ->
+                        value.toString()
+
+                    is Boolean ->
+                        value.toString()
+
+                    else ->
+                        value.toString()
+                }
+            }
+        }
+
+        return ""
+    }
+
+    // ==================================================
+    // ĐỌC TIỀN AN TOÀN
+    // ==================================================
+
+    fun readMoney(
+        document: DocumentSnapshot,
+        vararg fields: String
+    ): String {
+
+        for (field in fields) {
+
+            val value = document.get(field)
+
+            if (value != null) {
+
+                return when (value) {
+
+                    is Number -> {
+
+                        String.format(
+                            "%,.0fđ",
+                            value.toDouble()
+                        )
+                    }
+
+                    is String ->
+                        value
+
+                    else ->
+                        value.toString()
+                }
+            }
+        }
+
+        return "0đ"
+    }
+
+    // ==================================================
+    // LOAD ĐƠN HÀNG
+    // ==================================================
+
+    fun loadOrders(
+        showLoading: Boolean = true
+    ) {
+
+        if (showLoading) {
+            loading = true
+        }
+
+        refreshing = false
+        errorMessage = ""
+
+        db.collection("orders")
+            .get()
+            .addOnSuccessListener { result ->
+
+                orders =
+                    result.documents.map { document ->
+
+                        AdminOrderItem(
+
+                            id =
+                                document.id,
+
+                            customerName =
+                                readText(
+                                    document,
+                                    "customerName",
+                                    "name",
+                                    "fullName",
+                                    "customer"
+                                ).ifBlank {
+                                    "Khách hàng"
+                                },
+
+                            phone =
+                                readText(
+                                    document,
+                                    "phone",
+                                    "phoneNumber",
+                                    "customerPhone",
+                                    "mobile"
+                                ),
+
+                            address =
+                                readText(
+                                    document,
+                                    "address",
+                                    "shippingAddress",
+                                    "deliveryAddress"
+                                ),
+
+                            total =
+                                readMoney(
+                                    document,
+                                    "total",
+                                    "totalPrice",
+                                    "amount"
+                                ),
+
+                            status =
+                                readText(
+                                    document,
+                                    "status",
+                                    "orderStatus"
+                                ).ifBlank {
+                                    "pending"
+                                },
+
+                            createdAt =
+                                readText(
+                                    document,
+                                    "createdAt",
+                                    "date",
+                                    "orderDate"
+                                )
+                        )
+                    }
+
+                loading = false
+                refreshing = false
+            }
+            .addOnFailureListener { error ->
+
+                loading = false
+                refreshing = false
+
+                errorMessage =
+                    error.message
+                        ?: "Không thể tải đơn hàng."
+            }
+    }
+
+    // ==================================================
+    // TẢI LẦN ĐẦU
+    // ==================================================
+
+    LaunchedEffect(Unit) {
+        loadOrders()
+    }
+
+    // ==================================================
+    // GIAO DIỆN
+    // ==================================================
+
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(
+                    Color(0xFFF5F7FB)
+                )
+    ) {
+
+        // ==================================================
+        // HEADER
+        // ==================================================
+
+        Row(
+
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(
+
+                        Brush.horizontalGradient(
+                            listOf(
+                                Color(0xFF111827),
+                                Color(0xFF4F46E5),
+                                Color(0xFF7C3AED)
+                            )
+                        )
+                    )
+                    .padding(
+                        horizontal = 12.dp,
+                        vertical = 12.dp
+                    ),
+
+            verticalAlignment =
+                Alignment.CenterVertically
+        ) {
+
+            Column(
+                modifier =
+                    Modifier.weight(1f)
+            ) {
+
+                Text(
+                    text =
+                        "PHONE STORE ADMIN",
+
+                    color =
+                        Color.White,
+
+                    fontSize =
+                        20.sp,
+
+                    fontWeight =
+                        FontWeight.ExtraBold
+                )
+
+                Text(
+                    text =
+                        "Quản lý đơn hàng",
+
+                    color =
+                        Color.White.copy(
+                            alpha = 0.8f
+                        ),
+
+                    fontSize =
+                        11.sp
+                )
+            }
+
+            // TẢI LẠI
+
+            IconButton(
+                onClick = {
+
+                    refreshing = true
+
+                    loadOrders(
+                        showLoading = false
+                    )
+                }
+            ) {
+
+                if (refreshing) {
+
+                    CircularProgressIndicator(
+
+                        modifier =
+                            Modifier.size(
+                                20.dp
+                            ),
+
+                        color =
+                            Color.White,
+
+                        strokeWidth =
+                            2.dp
+                    )
+
+                } else {
+
+                    Icon(
+
+                        imageVector =
+                            Icons.Default.Refresh,
+
+                        contentDescription =
+                            "Tải lại",
+
+                        tint =
+                            Color.White
+                    )
+                }
+            }
+
+            Spacer(
+                modifier =
+                    Modifier.width(
+                        4.dp
+                    )
+            )
+
+            // ĐĂNG XUẤT
+
+            Button(
+
+                onClick =
+                    onLogout,
+
+                modifier =
+                    Modifier.height(
+                        40.dp
+                    ),
+
+                shape =
+                    RoundedCornerShape(
+                        10.dp
+                    ),
+
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor =
+                            Color(0xFFDC2626),
+
+                        contentColor =
+                            Color.White
+                    ),
+
+                contentPadding =
+                    PaddingValues(
+                        horizontal = 9.dp,
+                        vertical = 0.dp
+                    )
+            ) {
+
+                Icon(
+
+                    imageVector =
+                        Icons.Default.Logout,
+
+                    contentDescription =
+                        null,
+
+                    modifier =
+                        Modifier.size(
+                            16.dp
+                        )
+                )
+
+                Spacer(
+                    modifier =
+                        Modifier.width(
+                            4.dp
+                        )
+                )
+
+                Text(
+                    text =
+                        "ĐĂNG XUẤT",
+
+                    fontSize =
+                        9.sp,
+
+                    fontWeight =
+                        FontWeight.Bold
+                )
+            }
+        }
+
+        // ==================================================
+        // QUẢN LÝ SẢN PHẨM
+        // ==================================================
+
+        Button(
+
+            onClick =
+                onManageProducts,
+
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        horizontal = 14.dp,
+                        vertical = 12.dp
+                    )
+                    .height(
+                        50.dp
+                    ),
+
+            shape =
+                RoundedCornerShape(
+                    14.dp
+                ),
+
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor =
+                        Color(0xFF4F46E5),
+
+                    contentColor =
+                        Color.White
+                )
+        ) {
+
+            Icon(
+
+                imageVector =
+                    Icons.Default.Inventory,
+
+                contentDescription =
+                    null,
+
+                modifier =
+                    Modifier.size(
+                        18.dp
+                    )
+            )
+
+            Spacer(
+                modifier =
+                    Modifier.width(
+                        7.dp
+                    )
+            )
+
+            Text(
+
+                text =
+                    "QUẢN LÝ SẢN PHẨM",
+
+                fontSize =
+                    14.sp,
+
+                fontWeight =
+                    FontWeight.Bold
+            )
+        }
+
+        // ==================================================
+        // LỖI
+        // ==================================================
+
+        if (
+            errorMessage.isNotBlank()
+        ) {
+
+            Card(
+
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = 14.dp
+                        ),
+
+                shape =
+                    RoundedCornerShape(
+                        12.dp
+                    ),
+
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor =
+                            Color(0xFFFFE4E6)
+                    )
+            ) {
+
+                Text(
+
+                    text =
+                        errorMessage,
+
+                    color =
+                        Color(0xFFBE123C),
+
+                    fontSize =
+                        12.sp,
+
+                    modifier =
+                        Modifier.padding(
+                            12.dp
+                        )
+                )
+            }
+
+            Spacer(
+                modifier =
+                    Modifier.height(
+                        8.dp
+                    )
+            )
+        }
+
+        // ==================================================
+        // TIÊU ĐỀ
+        // ==================================================
+
+        Row(
+
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        horizontal = 14.dp
+                    ),
+
+            horizontalArrangement =
+                Arrangement.SpaceBetween,
+
+            verticalAlignment =
+                Alignment.CenterVertically
+        ) {
+
+            Column {
+
+                Text(
+
+                    text =
+                        "Đơn hàng",
+
+                    color =
+                        Color(0xFF111827),
+
+                    fontSize =
+                        19.sp,
+
+                    fontWeight =
+                        FontWeight.ExtraBold
+                )
+
+                Text(
+
+                    text =
+                        "${orders.size} đơn hàng",
+
+                    color =
+                        Color(0xFF64748B),
+
+                    fontSize =
+                        11.sp
+                )
+            }
+
+            Text(
+
+                text =
+                    "FIRESTORE",
+
+                color =
+                    Color(0xFF4F46E5),
+
+                fontSize =
+                    10.sp,
+
+                fontWeight =
+                    FontWeight.Bold
+            )
+        }
+
+        Spacer(
+            modifier =
+                Modifier.height(
+                    8.dp
+                )
+        )
+
+        // ==================================================
+        // DANH SÁCH
+        // ==================================================
+
+        if (loading) {
+
+            Box(
+
+                modifier =
+                    Modifier.fillMaxSize(),
+
+                contentAlignment =
+                    Alignment.Center
+            ) {
+
+                CircularProgressIndicator(
+                    color =
+                        Color(0xFF4F46E5)
+                )
+            }
+
+        } else if (
+            orders.isEmpty()
+        ) {
+
+            Box(
+
+                modifier =
+                    Modifier.fillMaxSize(),
+
+                contentAlignment =
+                    Alignment.Center
+            ) {
+
+                Column(
+
+                    horizontalAlignment =
+                        Alignment.CenterHorizontally
+                ) {
+
+                    Icon(
+
+                        imageVector =
+                            Icons.Default.ShoppingBag,
+
+                        contentDescription =
+                            null,
+
+                        modifier =
+                            Modifier.size(
+                                60.dp
+                            ),
+
+                        tint =
+                            Color(0xFF94A3B8)
+                    )
+
+                    Spacer(
+                        modifier =
+                            Modifier.height(
+                                10.dp
+                            )
+                    )
+
+                    Text(
+
+                        text =
+                            "Chưa có đơn hàng",
+
+                        fontSize =
+                            18.sp,
+
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+                }
+            }
+
+        } else {
+
+            LazyColumn(
+
+                modifier =
+                    Modifier.fillMaxSize(),
+
+                contentPadding =
+                    PaddingValues(
+                        start = 12.dp,
+                        end = 12.dp,
+                        bottom = 25.dp
+                    ),
+
+                verticalArrangement =
+                    Arrangement.spacedBy(
+                        10.dp
+                    )
+            ) {
+
+                items(
+
+                    items =
+                        orders,
+
+                    key =
+                        {
+                            it.id
+                        }
+
+                ) { order ->
+
+                    AdminOrderCard(
+
+                        order =
+                            order,
+
+                        onApprove = {
+
+                            db.collection(
+                                "orders"
+                            )
+                                .document(
+                                    order.id
+                                )
+                                .update(
+                                    "status",
+                                    "approved"
+                                )
+                                .addOnSuccessListener {
+                                    loadOrders()
+                                }
+                                .addOnFailureListener { error ->
+
+                                    errorMessage =
+                                        error.message
+                                            ?: "Không thể duyệt đơn."
+                                }
+                        },
+
+                        onCancel = {
+
+                            db.collection(
+                                "orders"
+                            )
+                                .document(
+                                    order.id
+                                )
+                                .update(
+                                    "status",
+                                    "cancelled"
+                                )
+                                .addOnSuccessListener {
+                                    loadOrders()
+                                }
+                                .addOnFailureListener { error ->
+
+                                    errorMessage =
+                                        error.message
+                                            ?: "Không thể hủy đơn."
+                                }
+                        },
+
+                        onDelete = {
+
+                            deleteOrder =
+                                order
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    // ==================================================
+    // DIALOG XÓA
+    // ==================================================
+
+    deleteOrder?.let { order ->
+
+        AlertDialog(
+
+            onDismissRequest = {
+
+                deleteOrder =
+                    null
+            },
+
+            title = {
+
+                Text(
+                    text =
+                        "Xóa đơn hàng?"
+                )
+            },
+
+            text = {
+
+                Text(
+                    text =
+                        "Bạn có chắc muốn xóa đơn của ${order.customerName}?"
+                )
+            },
+
+            confirmButton = {
+
+                TextButton(
+
+                    onClick = {
+
+                        db.collection(
+                            "orders"
+                        )
+                            .document(
+                                order.id
+                            )
+                            .delete()
+                            .addOnSuccessListener {
+
+                                deleteOrder =
+                                    null
+
+                                loadOrders()
+                            }
+                            .addOnFailureListener { error ->
+
+                                deleteOrder =
+                                    null
+
+                                errorMessage =
+                                    error.message
+                                        ?: "Không thể xóa đơn."
+                            }
+                    }
+                ) {
+
+                    Text(
+
+                        text =
+                            "XÓA",
+
+                        color =
+                            Color(0xFFDC2626),
+
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+                }
+            },
+
+            dismissButton = {
+
+                TextButton(
+
+                    onClick = {
+
+                        deleteOrder =
+                            null
+                    }
+                ) {
+
+                    Text("HỦY")
+                }
+            }
+        )
+    }
+}
+
+
+// ======================================================
+// CARD ĐƠN HÀNG
+// ======================================================
+
+@Composable
+private fun AdminOrderCard(
+
+    order:
+    AdminOrderItem,
+
+    onApprove:
+        () -> Unit,
+
+    onCancel:
+        () -> Unit,
+
+    onDelete:
+        () -> Unit
+) {
+
+    val status =
+        order.status
+            .trim()
+            .lowercase()
+
+    val statusText =
+
+        when (status) {
+
+            "approved",
+            "confirmed",
+            "accepted",
+            "success",
+            "completed" ->
+                "ĐÃ DUYỆT"
+
+            "cancelled",
+            "canceled",
+            "rejected" ->
+                "ĐÃ HỦY"
+
+            else ->
+                "CHỜ DUYỆT"
+        }
+
+    val statusColor =
+
+        when (status) {
+
+            "approved",
+            "confirmed",
+            "accepted",
+            "success",
+            "completed" ->
+                Color(0xFF16A34A)
+
+            "cancelled",
+            "canceled",
+            "rejected" ->
+                Color(0xFFDC2626)
+
+            else ->
+                Color(0xFFF59E0B)
+        }
+
+    Card(
+
+        modifier =
+            Modifier.fillMaxWidth(),
+
+        shape =
+            RoundedCornerShape(
+                18.dp
+            ),
+
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    Color.White
+            ),
+
+        elevation =
+            CardDefaults.cardElevation(
+                defaultElevation =
+                    3.dp
+            )
+    ) {
+
+        Column(
+
+            modifier =
+                Modifier.padding(
+                    14.dp
+                )
+        ) {
+
+            Row(
+
+                verticalAlignment =
+                    Alignment.CenterVertically
+            ) {
+
+                Column(
+
+                    modifier =
+                        Modifier.weight(
+                            1f
+                        )
+                ) {
+
+                    Text(
+
+                        text =
+                            order.customerName,
+
+                        color =
+                            Color(0xFF111827),
+
+                        fontSize =
+                            16.sp,
+
+                        fontWeight =
+                            FontWeight.ExtraBold
+                    )
+
+                    if (
+                        order.phone.isNotBlank()
+                    ) {
+
+                        Text(
+
+                            text =
+                                "SĐT: ${order.phone}",
+
+                            color =
+                                Color(0xFF64748B),
+
+                            fontSize =
+                                11.sp
+                        )
+                    }
+                }
+
+                Box(
+
+                    modifier =
+                        Modifier
+                            .background(
+
+                                statusColor.copy(
+                                    alpha = 0.12f
+                                ),
+
+                                RoundedCornerShape(
+                                    9.dp
+                                )
+                            )
+                            .padding(
+                                horizontal = 9.dp,
+                                vertical = 6.dp
+                            )
+                ) {
+
+                    Text(
+
+                        text =
+                            statusText,
+
+                        color =
+                            statusColor,
+
+                        fontSize =
+                            9.sp,
+
+                        fontWeight =
+                            FontWeight.ExtraBold
+                    )
+                }
+            }
+
+            Spacer(
+                modifier =
+                    Modifier.height(
+                        10.dp
+                    )
+            )
+
+            if (
+                order.address.isNotBlank()
+            ) {
+
+                Text(
+
+                    text =
+                        "Địa chỉ: ${order.address}",
+
+                    color =
+                        Color(0xFF475569),
+
+                    fontSize =
+                        12.sp
+                )
+
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            6.dp
+                        )
+                )
+            }
+
+            Text(
+
+                text =
+                    "Tổng tiền: ${order.total}",
+
+                color =
+                    Color(0xFFE11D48),
+
+                fontSize =
+                    17.sp,
+
+                fontWeight =
+                    FontWeight.ExtraBold
+            )
+
+            if (
+                order.createdAt.isNotBlank()
+            ) {
+
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            4.dp
+                        )
+                )
+
+                Text(
+
+                    text =
+                        "Ngày đặt: ${order.createdAt}",
+
+                    color =
+                        Color(0xFF94A3B8),
+
+                    fontSize =
+                        10.sp
+                )
+            }
+
+            Spacer(
+                modifier =
+                    Modifier.height(
+                        12.dp
+                    )
+            )
+
+            Row(
+
+                modifier =
+                    Modifier.fillMaxWidth(),
+
+                horizontalArrangement =
+                    Arrangement.spacedBy(
+                        8.dp
+                    )
+            ) {
+
+                if (
+                    status != "approved" &&
+                    status != "confirmed" &&
+                    status != "accepted" &&
+                    status != "success" &&
+                    status != "completed"
+                ) {
+
+                    Button(
+
+                        onClick =
+                            onApprove,
+
+                        modifier =
+                            Modifier.weight(
+                                1f
+                            ),
+
+                        shape =
+                            RoundedCornerShape(
+                                10.dp
+                            ),
+
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor =
+                                    Color(0xFF16A34A)
+                            ),
+
+                        contentPadding =
+                            PaddingValues(
+                                horizontal = 4.dp
+                            )
+                    ) {
+
+                        Icon(
+
+                            imageVector =
+                                Icons.Default.Check,
+
+                            contentDescription =
+                                null,
+
+                            modifier =
+                                Modifier.size(
+                                    15.dp
+                                )
+                        )
+
+                        Spacer(
+                            modifier =
+                                Modifier.width(
+                                    4.dp
+                                )
+                        )
+
+                        Text(
+
+                            text =
+                                "DUYỆT",
+
+                            fontSize =
+                                10.sp,
+
+                            fontWeight =
+                                FontWeight.Bold
+                        )
+                    }
+                }
+
+                if (
+                    status != "cancelled" &&
+                    status != "canceled" &&
+                    status != "rejected"
+                ) {
+
+                    Button(
+
+                        onClick =
+                            onCancel,
+
+                        modifier =
+                            Modifier.weight(
+                                1f
+                            ),
+
+                        shape =
+                            RoundedCornerShape(
+                                10.dp
+                            ),
+
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor =
+                                    Color(0xFFF59E0B)
+                            ),
+
+                        contentPadding =
+                            PaddingValues(
+                                horizontal = 4.dp
+                            )
+                    ) {
+
+                        Text(
+
+                            text =
+                                "HỦY",
+
+                            fontSize =
+                                10.sp,
+
+                            fontWeight =
+                                FontWeight.Bold
+                        )
+                    }
+                }
+
+                IconButton(
+
+                    onClick =
+                        onDelete
+                ) {
+
+                    Icon(
+
+                        imageVector =
+                            Icons.Default.Delete,
+
+                        contentDescription =
+                            "Xóa",
+
+                        tint =
+                            Color(0xFFDC2626)
+                    )
+                }
+            }
+        }
+    }
+}
