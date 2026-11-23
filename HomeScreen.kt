@@ -1,0 +1,2284 @@
+package com.example.phonestore
+
+import android.content.Intent
+import android.net.Uri
+
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ShoppingCart
+
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+import coil3.compose.AsyncImage
+
+import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FirebaseFirestore
+
+import kotlinx.coroutines.delay
+
+
+// ======================================================
+// MÀU GIAO DIỆN
+// ======================================================
+
+private val Primary = Color(0xFF4F46E5)
+private val Purple = Color(0xFF7C3AED)
+
+private val Background = Color(0xFFF8FAFC)
+private val CardColor = Color.White
+
+private val TextDark = Color(0xFF111827)
+private val TextGray = Color(0xFF64748B)
+private val TextLight = Color(0xFF94A3B8)
+
+private val PriceRed = Color(0xFFE11D48)
+private val DiscountRed = Color(0xFFEF4444)
+
+
+// ======================================================
+// HOME SCREEN
+// ======================================================
+
+@Composable
+fun HomeScreen(
+    onLogout: () -> Unit,
+    onProductClick: (Phone) -> Unit,
+    onCartClick: () -> Unit,
+    onMenuClick: (String) -> Unit
+) {
+
+    val context = LocalContext.current
+
+    var searchText by remember {
+        mutableStateOf("")
+    }
+
+    var selectedCategory by remember {
+        mutableStateOf("Tất cả")
+    }
+
+
+    // ==================================================
+    // SẢN PHẨM MẶC ĐỊNH
+    // ==================================================
+
+    val defaultPhones = remember {
+
+        listOf(
+
+            Phone(
+                name = "iPhone 15 Pro Max",
+                price = "29.990.000đ",
+                oldPrice = "34.990.000đ",
+                discount = "-14%",
+                category = "iPhone",
+                image = R.drawable.iphone15promax
+            ),
+
+            Phone(
+                name = "iPhone 15 Pro",
+                price = "25.990.000đ",
+                oldPrice = "29.990.000đ",
+                discount = "-10%",
+                category = "iPhone",
+                image = R.drawable.iphone15promax
+            ),
+
+            Phone(
+                name = "iPhone 15 Plus",
+                price = "21.990.000đ",
+                oldPrice = "24.990.000đ",
+                discount = "-12%",
+                category = "iPhone",
+                image = R.drawable.iphone15promax
+            ),
+
+            Phone(
+                name = "iPhone 15",
+                price = "18.990.000đ",
+                oldPrice = "21.990.000đ",
+                discount = "-14%",
+                category = "iPhone",
+                image = R.drawable.iphone15promax
+            ),
+
+            Phone(
+                name = "iPhone 14 Pro Max",
+                price = "23.990.000đ",
+                oldPrice = "27.990.000đ",
+                discount = "-14%",
+                category = "iPhone",
+                image = R.drawable.iphone15promax
+            ),
+
+            Phone(
+                name = "Samsung Galaxy S24 Ultra",
+                price = "25.990.000đ",
+                oldPrice = "30.990.000đ",
+                discount = "-16%",
+                category = "Samsung",
+                image = R.drawable.samsung_s24_ultra
+            ),
+
+            Phone(
+                name = "Samsung Galaxy S24+",
+                price = "21.990.000đ",
+                oldPrice = "25.990.000đ",
+                discount = "-15%",
+                category = "Samsung",
+                image = R.drawable.samsung_s24_ultra
+            ),
+
+            Phone(
+                name = "Samsung Galaxy S24",
+                price = "18.490.000đ",
+                oldPrice = "21.990.000đ",
+                discount = "-16%",
+                category = "Samsung",
+                image = R.drawable.samsung_s24_ultra
+            ),
+
+            Phone(
+                name = "Samsung Galaxy S23 Ultra",
+                price = "20.990.000đ",
+                oldPrice = "25.990.000đ",
+                discount = "-19%",
+                category = "Samsung",
+                image = R.drawable.samsung_s24_ultra
+            ),
+
+            Phone(
+                name = "Samsung Galaxy A55 5G",
+                price = "9.990.000đ",
+                oldPrice = "11.490.000đ",
+                discount = "-13%",
+                category = "Samsung",
+                image = R.drawable.samsung_s24_ultra
+            ),
+
+            Phone(
+                name = "Xiaomi 14",
+                price = "16.990.000đ",
+                oldPrice = "19.990.000đ",
+                discount = "-15%",
+                category = "Xiaomi",
+                image = R.drawable.xiaomi14
+            ),
+
+            Phone(
+                name = "Xiaomi 14 Ultra",
+                price = "24.990.000đ",
+                oldPrice = "29.990.000đ",
+                discount = "-17%",
+                category = "Xiaomi",
+                image = R.drawable.xiaomi14
+            ),
+
+            Phone(
+                name = "Xiaomi 13T Pro",
+                price = "12.990.000đ",
+                oldPrice = "15.990.000đ",
+                discount = "-19%",
+                category = "Xiaomi",
+                image = R.drawable.xiaomi14
+            ),
+
+            Phone(
+                name = "Xiaomi Redmi Note 13 Pro",
+                price = "7.490.000đ",
+                oldPrice = "8.990.000đ",
+                discount = "-17%",
+                category = "Xiaomi",
+                image = R.drawable.xiaomi14
+            ),
+
+            Phone(
+                name = "Xiaomi Redmi Note 13",
+                price = "5.490.000đ",
+                oldPrice = "6.490.000đ",
+                discount = "-15%",
+                category = "Xiaomi",
+                image = R.drawable.xiaomi14
+            ),
+
+            Phone(
+                name = "OPPO Reno 12",
+                price = "10.990.000đ",
+                oldPrice = "12.990.000đ",
+                discount = "-15%",
+                category = "OPPO",
+                image = R.drawable.oppo_reno12
+            ),
+
+            Phone(
+                name = "OPPO Reno 12 Pro",
+                price = "13.990.000đ",
+                oldPrice = "16.490.000đ",
+                discount = "-15%",
+                category = "OPPO",
+                image = R.drawable.oppo_reno12
+            ),
+
+            Phone(
+                name = "OPPO Reno 11",
+                price = "9.490.000đ",
+                oldPrice = "11.490.000đ",
+                discount = "-17%",
+                category = "OPPO",
+                image = R.drawable.oppo_reno12
+            ),
+
+            Phone(
+                name = "OPPO A79 5G",
+                price = "6.490.000đ",
+                oldPrice = "7.490.000đ",
+                discount = "-13%",
+                category = "OPPO",
+                image = R.drawable.oppo_reno12
+            ),
+
+            Phone(
+                name = "OPPO A58",
+                price = "4.990.000đ",
+                oldPrice = "5.990.000đ",
+                discount = "-17%",
+                category = "OPPO",
+                image = R.drawable.oppo_reno12
+            )
+        )
+    }
+
+
+    // ==================================================
+    // FIRESTORE
+    // ==================================================
+
+    val db = remember {
+        FirebaseFirestore.getInstance()
+    }
+
+    var firestorePhones by remember {
+        mutableStateOf<List<Phone>>(emptyList())
+    }
+
+    LaunchedEffect(Unit) {
+
+        db.collection("products")
+            .get()
+            .addOnSuccessListener { result ->
+
+                firestorePhones =
+                    result.documents.mapNotNull { document ->
+
+                        val name =
+                            readHomeText(
+                                document,
+                                "name"
+                            ).trim()
+
+                        val price =
+                            readHomeText(
+                                document,
+                                "price"
+                            ).trim()
+
+                        val oldPrice =
+                            readHomeText(
+                                document,
+                                "oldPrice"
+                            ).trim()
+
+                        val discount =
+                            readHomeText(
+                                document,
+                                "discount"
+                            ).trim()
+
+                        val category =
+                            readHomeText(
+                                document,
+                                "category"
+                            ).trim()
+
+                        val imageUrl =
+                            readHomeText(
+                                document,
+                                "imageUrl"
+                            ).trim()
+
+                        if (name.isBlank()) {
+
+                            null
+
+                        } else {
+
+                            Phone(
+
+                                name =
+                                    name,
+
+                                price =
+                                    price.ifBlank {
+                                        "Liên hệ"
+                                    },
+
+                                oldPrice =
+                                    oldPrice,
+
+                                discount =
+                                    discount,
+
+                                category =
+                                    category.ifBlank {
+                                        "Khác"
+                                    },
+
+                                image =
+                                    fallbackImageForCategory(
+                                        category
+                                    ),
+
+                                imageUrl =
+                                    imageUrl
+                            )
+                        }
+                    }
+            }
+    }
+
+
+    // ==================================================
+    // GỘP SẢN PHẨM
+    // ==================================================
+
+    val firestoreNames =
+        firestorePhones
+            .map {
+                it.name
+                    .trim()
+                    .lowercase()
+            }
+            .toSet()
+
+    val phones =
+        firestorePhones +
+                defaultPhones.filter { phone ->
+
+                    phone.name
+                        .trim()
+                        .lowercase() !in
+                            firestoreNames
+                }
+
+
+    // ==================================================
+    // LỌC
+    // ==================================================
+
+    val filteredPhones =
+        phones.filter { phone ->
+
+            val searchMatch =
+                searchText.isBlank() ||
+                        phone.name.contains(
+                            searchText,
+                            ignoreCase = true
+                        )
+
+            val categoryMatch =
+                selectedCategory == "Tất cả" ||
+                        phone.category ==
+                        selectedCategory
+
+            searchMatch &&
+                    categoryMatch
+        }
+
+
+    // ==================================================
+    // HOME
+    // ==================================================
+
+    Box(
+
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(
+                    Background
+                )
+    ) {
+
+        // ==================================================
+        // NỘI DUNG CHÍNH
+        // ==================================================
+
+        Column(
+            modifier =
+                Modifier.fillMaxSize()
+        ) {
+
+            // ==============================================
+            // HEADER
+            // ==============================================
+
+            Row(
+
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.horizontalGradient(
+                                colors =
+                                    listOf(
+                                        Primary,
+                                        Purple
+                                    )
+                            )
+                        )
+                        .padding(
+                            horizontal = 16.dp,
+                            vertical = 14.dp
+                        ),
+
+                verticalAlignment =
+                    Alignment.CenterVertically
+            ) {
+
+                Column(
+                    modifier =
+                        Modifier.weight(1f)
+                ) {
+
+                    Text(
+                        text =
+                            "PHONE STORE",
+
+                        color =
+                            Color.White,
+
+                        fontSize =
+                            24.sp,
+
+                        fontWeight =
+                            FontWeight.ExtraBold
+                    )
+
+                    Text(
+                        text =
+                            "Công nghệ trong tầm tay",
+
+                        color =
+                            Color.White.copy(
+                                alpha = 0.82f
+                            ),
+
+                        fontSize =
+                            11.sp
+                    )
+                }
+
+                IconButton(
+                    onClick =
+                        onCartClick
+                ) {
+
+                    Icon(
+                        imageVector =
+                            Icons.Default.ShoppingCart,
+
+                        contentDescription =
+                            "Giỏ hàng",
+
+                        tint =
+                            Color.White,
+
+                        modifier =
+                            Modifier.size(
+                                24.dp
+                            )
+                    )
+                }
+
+                IconButton(
+                    onClick =
+                        onLogout
+                ) {
+
+                    Icon(
+                        imageVector =
+                            Icons.Default.Logout,
+
+                        contentDescription =
+                            "Đăng xuất",
+
+                        tint =
+                            Color.White,
+
+                        modifier =
+                            Modifier.size(
+                                24.dp
+                            )
+                    )
+                }
+            }
+
+
+            // ==============================================
+            // SEARCH
+            // ==============================================
+
+            OutlinedTextField(
+
+                value =
+                    searchText,
+
+                onValueChange = {
+                    searchText = it
+                },
+
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = 14.dp,
+                            vertical = 12.dp
+                        ),
+
+                singleLine =
+                    true,
+
+                leadingIcon = {
+
+                    Icon(
+                        imageVector =
+                            Icons.Default.Search,
+
+                        contentDescription =
+                            "Tìm kiếm",
+
+                        tint =
+                            Primary
+                    )
+                },
+
+                placeholder = {
+
+                    Text(
+                        text =
+                            "Tìm kiếm điện thoại..."
+                    )
+                },
+
+                shape =
+                    RoundedCornerShape(
+                        18.dp
+                    )
+            )
+
+
+            // ==============================================
+            // MENU
+            // ==============================================
+
+            Row(
+
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(
+                            rememberScrollState()
+                        )
+                        .padding(
+                            horizontal = 14.dp
+                        ),
+
+                horizontalArrangement =
+                    Arrangement.spacedBy(
+                        8.dp
+                    )
+            ) {
+
+                listOf(
+                    "Danh mục sản phẩm",
+                    "Tin tức",
+                    "Build PC",
+                    "Tuyển dụng",
+                    "Giới thiệu",
+                    "Liên hệ",
+                    "Yêu cầu kỹ thuật"
+                ).forEach { menu ->
+
+                    val selected =
+                        menu ==
+                                "Danh mục sản phẩm"
+
+                    Surface(
+
+                        modifier =
+                            Modifier.clickable {
+
+                                onMenuClick(
+                                    menu
+                                )
+                            },
+
+                        shape =
+                            RoundedCornerShape(
+                                12.dp
+                            ),
+
+                        color =
+                            if (selected) {
+                                Primary
+                            } else {
+                                CardColor
+                            },
+
+                        shadowElevation =
+                            3.dp
+                    ) {
+
+                        Text(
+
+                            text =
+                                menu,
+
+                            modifier =
+                                Modifier.padding(
+                                    horizontal = 15.dp,
+                                    vertical = 10.dp
+                                ),
+
+                            color =
+                                if (selected) {
+                                    Color.White
+                                } else {
+                                    TextDark
+                                },
+
+                            fontSize =
+                                11.sp,
+
+                            fontWeight =
+                                FontWeight.SemiBold,
+
+                            maxLines =
+                                1
+                        )
+                    }
+                }
+            }
+
+
+            Spacer(
+                modifier =
+                    Modifier.height(
+                        12.dp
+                    )
+            )
+
+
+            // ==============================================
+            // NỘI DUNG CUỘN
+            // ==============================================
+
+            LazyColumn(
+
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+
+                contentPadding =
+                    PaddingValues(
+                        top = 2.dp,
+                        bottom = 115.dp
+                    ),
+
+                verticalArrangement =
+                    Arrangement.spacedBy(
+                        12.dp
+                    )
+            ) {
+
+                // ==========================================
+                // BANNER
+                // ==========================================
+
+                item {
+
+                    ModernBanner()
+                }
+
+
+                // ==========================================
+                // DANH MỤC
+                // ==========================================
+
+                item {
+
+                    Row(
+
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(
+                                    rememberScrollState()
+                                )
+                                .padding(
+                                    horizontal = 14.dp
+                                ),
+
+                        horizontalArrangement =
+                            Arrangement.spacedBy(
+                                8.dp
+                            )
+                    ) {
+
+                        listOf(
+                            "Tất cả",
+                            "iPhone",
+                            "Samsung",
+                            "Xiaomi",
+                            "OPPO"
+                        ).forEach { category ->
+
+                            val selected =
+                                selectedCategory ==
+                                        category
+
+                            Surface(
+
+                                modifier =
+                                    Modifier.clickable {
+
+                                        selectedCategory =
+                                            category
+                                    },
+
+                                shape =
+                                    RoundedCornerShape(
+                                        13.dp
+                                    ),
+
+                                color =
+                                    if (selected) {
+                                        Primary
+                                    } else {
+                                        CardColor
+                                    },
+
+                                shadowElevation =
+                                    2.dp
+                            ) {
+
+                                Text(
+
+                                    text =
+                                        category,
+
+                                    modifier =
+                                        Modifier.padding(
+                                            horizontal = 15.dp,
+                                            vertical = 9.dp
+                                        ),
+
+                                    color =
+                                        if (selected) {
+                                            Color.White
+                                        } else {
+                                            TextDark
+                                        },
+
+                                    fontSize =
+                                        11.sp,
+
+                                    fontWeight =
+                                        FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+                }
+
+
+                // ==========================================
+                // TIÊU ĐỀ
+                // ==========================================
+
+                item {
+
+                    Row(
+
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    horizontal = 14.dp
+                                ),
+
+                        horizontalArrangement =
+                            Arrangement.SpaceBetween,
+
+                        verticalAlignment =
+                            Alignment.CenterVertically
+                    ) {
+
+                        Column {
+
+                            Text(
+
+                                text =
+                                    "Sản phẩm nổi bật",
+
+                                color =
+                                    TextDark,
+
+                                fontSize =
+                                    20.sp,
+
+                                fontWeight =
+                                    FontWeight.ExtraBold
+                            )
+
+                            Text(
+
+                                text =
+                                    "Điện thoại chính hãng",
+
+                                color =
+                                    TextGray,
+
+                                fontSize =
+                                    11.sp
+                            )
+                        }
+
+                        Text(
+
+                            text =
+                                "${filteredPhones.size} sản phẩm",
+
+                            color =
+                                Primary,
+
+                            fontSize =
+                                12.sp,
+
+                            fontWeight =
+                                FontWeight.Bold
+                        )
+                    }
+                }
+
+
+                // ==========================================
+                // SẢN PHẨM
+                // ==========================================
+
+                if (
+                    filteredPhones.isEmpty()
+                ) {
+
+                    item {
+
+                        Column(
+
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(
+                                        250.dp
+                                    ),
+
+                            horizontalAlignment =
+                                Alignment.CenterHorizontally,
+
+                            verticalArrangement =
+                                Arrangement.Center
+                        ) {
+
+                            Icon(
+
+                                imageVector =
+                                    Icons.Default.Search,
+
+                                contentDescription =
+                                    null,
+
+                                modifier =
+                                    Modifier.size(
+                                        52.dp
+                                    ),
+
+                                tint =
+                                    TextLight
+                            )
+
+                            Spacer(
+                                modifier =
+                                    Modifier.height(
+                                        10.dp
+                                    )
+                            )
+
+                            Text(
+
+                                text =
+                                    "Không tìm thấy sản phẩm",
+
+                                color =
+                                    TextDark,
+
+                                fontWeight =
+                                    FontWeight.Bold
+                            )
+
+                            Text(
+
+                                text =
+                                    "Thử tìm kiếm với từ khóa khác",
+
+                                color =
+                                    TextGray,
+
+                                fontSize =
+                                    12.sp
+                            )
+                        }
+                    }
+
+                } else {
+
+                    items(
+
+                        items =
+                            filteredPhones.chunked(
+                                2
+                            )
+                    ) { rowPhones ->
+
+                        Row(
+
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(
+                                        horizontal = 12.dp
+                                    ),
+
+                            horizontalArrangement =
+                                Arrangement.spacedBy(
+                                    10.dp
+                                )
+                        ) {
+
+                            rowPhones.forEach { phone ->
+
+                                Box(
+                                    modifier =
+                                        Modifier.weight(
+                                            1f
+                                        )
+                                ) {
+
+                                    ModernPhoneCard(
+
+                                        phone =
+                                            phone,
+
+                                        onClick = {
+
+                                            onProductClick(
+                                                phone
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+
+                            if (
+                                rowPhones.size == 1
+                            ) {
+
+                                Spacer(
+                                    modifier =
+                                        Modifier.weight(
+                                            1f
+                                        )
+                                )
+                            }
+                        }
+                    }
+                }
+
+
+                // ==========================================
+                // FOOTER
+                // ==========================================
+
+                item {
+
+                    ModernFooter()
+                }
+            }
+        }
+
+
+        // ==================================================
+        // NÚT LIÊN HỆ NỔI
+        //
+        // KHÔNG DÙNG .align()
+        // ==================================================
+
+        Column(
+
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(
+                        end = 14.dp,
+                        bottom = 20.dp
+                    ),
+
+            horizontalAlignment =
+                Alignment.End,
+
+            verticalArrangement =
+                Arrangement.Bottom
+        ) {
+
+            FloatingContactButtons(
+                context =
+                    context
+            )
+        }
+    }
+}
+
+
+// ======================================================
+// NÚT ZALO + HOTLINE
+// ======================================================
+
+@Composable
+private fun FloatingContactButtons(
+    context: android.content.Context
+) {
+
+    val phoneNumber =
+        "0968207886"
+
+    Column(
+
+        horizontalAlignment =
+            Alignment.End,
+
+        verticalArrangement =
+            Arrangement.spacedBy(
+                9.dp
+            )
+    ) {
+
+        // ==================================================
+        // HOTLINE
+        // ==================================================
+
+        Surface(
+
+            modifier =
+                Modifier.clickable {
+
+                    try {
+
+                        val intent =
+                            Intent(
+                                Intent.ACTION_DIAL,
+                                Uri.parse(
+                                    "tel:$phoneNumber"
+                                )
+                            )
+
+                        context.startActivity(
+                            intent
+                        )
+
+                    } catch (_: Exception) {
+                    }
+                },
+
+            shape =
+                RoundedCornerShape(
+                    18.dp
+                ),
+
+            color =
+                Color.White,
+
+            shadowElevation =
+                9.dp
+        ) {
+
+            Row(
+
+                modifier =
+                    Modifier.padding(
+                        horizontal = 11.dp,
+                        vertical = 8.dp
+                    ),
+
+                verticalAlignment =
+                    Alignment.CenterVertically
+            ) {
+
+                Box(
+
+                    modifier =
+                        Modifier
+                            .size(
+                                36.dp
+                            )
+                            .clip(
+                                RoundedCornerShape(
+                                    50.dp
+                                )
+                            )
+                            .background(
+                                Color(0xFF16A34A)
+                            ),
+
+                    contentAlignment =
+                        Alignment.Center
+                ) {
+
+                    Icon(
+
+                        imageVector =
+                            Icons.Default.Call,
+
+                        contentDescription =
+                            "Gọi điện",
+
+                        tint =
+                            Color.White,
+
+                        modifier =
+                            Modifier.size(
+                                19.dp
+                            )
+                    )
+                }
+
+                Spacer(
+                    modifier =
+                        Modifier.width(
+                            8.dp
+                        )
+                )
+
+                Column {
+
+                    Text(
+
+                        text =
+                            "HOTLINE",
+
+                        color =
+                            Color(0xFF64748B),
+
+                        fontSize =
+                            8.sp,
+
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+
+                    Text(
+
+                        text =
+                            "0968 207 886",
+
+                        color =
+                            Color(0xFF111827),
+
+                        fontSize =
+                            11.sp,
+
+                        fontWeight =
+                            FontWeight.ExtraBold
+                    )
+                }
+            }
+        }
+
+
+        // ==================================================
+        // ZALO
+        // ==================================================
+
+        Surface(
+
+            modifier =
+                Modifier
+                    .size(
+                        58.dp
+                    )
+                    .clickable {
+
+                        try {
+
+                            val intent =
+                                Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse(
+                                        "https://zalo.me/$phoneNumber"
+                                    )
+                                )
+
+                            context.startActivity(
+                                intent
+                            )
+
+                        } catch (_: Exception) {
+                        }
+                    },
+
+            shape =
+                RoundedCornerShape(
+                    50.dp
+                ),
+
+            color =
+                Color(0xFF1688FF),
+
+            shadowElevation =
+                12.dp
+        ) {
+
+            Box(
+
+                contentAlignment =
+                    Alignment.Center
+            ) {
+
+                Text(
+
+                    text =
+                        "Zalo",
+
+                    color =
+                        Color.White,
+
+                    fontSize =
+                        13.sp,
+
+                    fontWeight =
+                        FontWeight.ExtraBold
+                )
+            }
+        }
+    }
+}
+
+
+// ======================================================
+// BANNER
+// ======================================================
+
+@OptIn(
+    ExperimentalAnimationApi::class
+)
+@Composable
+private fun ModernBanner() {
+
+    val banners =
+        listOf(
+
+            R.drawable.banner_s24_ultra,
+
+            R.drawable.banner_s25_ultra,
+
+            R.drawable.banner_oppo
+        )
+
+    var currentIndex by remember {
+        mutableStateOf(0)
+    }
+
+
+    LaunchedEffect(Unit) {
+
+        while (true) {
+
+            delay(3000)
+
+            currentIndex =
+                (currentIndex + 1) %
+                        banners.size
+        }
+    }
+
+
+    val transition =
+        rememberInfiniteTransition(
+            label =
+                "banner_zoom"
+        )
+
+    val scale by
+    transition.animateFloat(
+
+        initialValue =
+            1.0f,
+
+        targetValue =
+            1.025f,
+
+        animationSpec =
+            infiniteRepeatable(
+
+                animation =
+                    tween(
+                        durationMillis =
+                            2200,
+
+                        easing =
+                            FastOutSlowInEasing
+                    ),
+
+                repeatMode =
+                    RepeatMode.Reverse
+            ),
+
+        label =
+            "banner_scale"
+    )
+
+
+    AnimatedContent(
+
+        targetState =
+            currentIndex,
+
+        transitionSpec = {
+
+            (
+                    slideInHorizontally(
+                        initialOffsetX = {
+                            it
+                        }
+                    ) +
+                            fadeIn(
+                                animationSpec =
+                                    tween(
+                                        450
+                                    )
+                            )
+                    ).togetherWith(
+
+                    slideOutHorizontally(
+                        targetOffsetX = {
+                            -it
+                        }
+                    ) +
+                            fadeOut(
+                                animationSpec =
+                                    tween(
+                                        350
+                                    )
+                            )
+                )
+        },
+
+        label =
+            "banner_change"
+
+    ) { index ->
+
+        Box(
+
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        horizontal = 12.dp
+                    )
+                    .height(
+                        180.dp
+                    )
+                    .clip(
+                        RoundedCornerShape(
+                            20.dp
+                        )
+                    )
+                    .background(
+                        CardColor
+                    )
+        ) {
+
+            Image(
+
+                painter =
+                    painterResource(
+                        id =
+                            banners[index]
+                    ),
+
+                contentDescription =
+                    "Banner Phone Store",
+
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+
+                            scaleX =
+                                scale
+
+                            scaleY =
+                                scale
+                        },
+
+                contentScale =
+                    ContentScale.Crop
+            )
+
+
+            Row(
+
+                modifier =
+                    Modifier
+                        .align(
+                            Alignment.BottomCenter
+                        )
+                        .padding(
+                            bottom = 9.dp
+                        ),
+
+                horizontalArrangement =
+                    Arrangement.spacedBy(
+                        6.dp
+                    )
+            ) {
+
+                banners.forEachIndexed {
+                        dotIndex,
+                        _ ->
+
+                    Box(
+
+                        modifier =
+                            Modifier
+                                .size(
+
+                                    if (
+                                        dotIndex ==
+                                        index
+                                    ) {
+                                        20.dp
+                                    } else {
+                                        7.dp
+                                    }
+                                )
+                                .clip(
+                                    RoundedCornerShape(
+                                        50
+                                    )
+                                )
+                                .background(
+
+                                    if (
+                                        dotIndex ==
+                                        index
+                                    ) {
+                                        Color.White
+                                    } else {
+                                        Color.White.copy(
+                                            alpha =
+                                                0.55f
+                                        )
+                                    }
+                                )
+                    )
+                }
+            }
+        }
+    }
+}
+
+
+// ======================================================
+// PHONE CARD
+// ======================================================
+
+@Composable
+private fun ModernPhoneCard(
+    phone: Phone,
+    onClick: () -> Unit
+) {
+
+    Card(
+
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable {
+                    onClick()
+                },
+
+        shape =
+            RoundedCornerShape(
+                20.dp
+            ),
+
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    CardColor
+            ),
+
+        elevation =
+            CardDefaults.cardElevation(
+                defaultElevation =
+                    4.dp
+            )
+    ) {
+
+        Column {
+
+            Box(
+
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(
+                            150.dp
+                        )
+                        .background(
+                            Color(0xFFF9FAFB)
+                        )
+            ) {
+
+                if (
+                    phone.imageUrl
+                        .isNotBlank()
+                ) {
+
+                    AsyncImage(
+
+                        model =
+                            phone.imageUrl,
+
+                        contentDescription =
+                            phone.name,
+
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .padding(
+                                    8.dp
+                                ),
+
+                        contentScale =
+                            ContentScale.Fit
+                    )
+
+                } else {
+
+                    Image(
+
+                        painter =
+                            painterResource(
+                                id =
+                                    phone.image
+                            ),
+
+                        contentDescription =
+                            phone.name,
+
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .padding(
+                                    8.dp
+                                ),
+
+                        contentScale =
+                            ContentScale.Fit
+                    )
+                }
+
+
+                Text(
+
+                    text =
+                        phone.discount,
+
+                    color =
+                        Color.White,
+
+                    fontSize =
+                        10.sp,
+
+                    fontWeight =
+                        FontWeight.ExtraBold,
+
+                    modifier =
+                        Modifier
+                            .padding(
+                                8.dp
+                            )
+                            .background(
+                                DiscountRed,
+                                RoundedCornerShape(
+                                    8.dp
+                                )
+                            )
+                            .padding(
+                                horizontal = 8.dp,
+                                vertical = 4.dp
+                            )
+                )
+            }
+
+
+            Column(
+
+                modifier =
+                    Modifier.padding(
+                        12.dp
+                    )
+            ) {
+
+                Text(
+
+                    text =
+                        phone.category.uppercase(),
+
+                    color =
+                        Primary,
+
+                    fontSize =
+                        9.sp,
+
+                    fontWeight =
+                        FontWeight.Bold
+                )
+
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            4.dp
+                        )
+                )
+
+                Text(
+
+                    text =
+                        phone.name,
+
+                    color =
+                        TextDark,
+
+                    fontSize =
+                        13.sp,
+
+                    fontWeight =
+                        FontWeight.Bold,
+
+                    maxLines =
+                        2
+                )
+
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            5.dp
+                        )
+                )
+
+                Text(
+
+                    text =
+                        phone.price,
+
+                    color =
+                        PriceRed,
+
+                    fontSize =
+                        15.sp,
+
+                    fontWeight =
+                        FontWeight.ExtraBold
+                )
+
+                Text(
+
+                    text =
+                        phone.oldPrice,
+
+                    color =
+                        TextLight,
+
+                    fontSize =
+                        10.sp
+                )
+
+                Spacer(
+                    modifier =
+                        Modifier.height(
+                            9.dp
+                        )
+                )
+
+                Button(
+
+                    onClick =
+                        onClick,
+
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(
+                                40.dp
+                            ),
+
+                    contentPadding =
+                        PaddingValues(
+                            0.dp
+                        ),
+
+                    shape =
+                        RoundedCornerShape(
+                            11.dp
+                        ),
+
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor =
+                                Primary
+                        )
+                ) {
+
+                    Icon(
+
+                        imageVector =
+                            Icons.Default.ShoppingCart,
+
+                        contentDescription =
+                            null,
+
+                        modifier =
+                            Modifier.size(
+                                16.dp
+                            )
+                    )
+
+                    Spacer(
+                        modifier =
+                            Modifier.width(
+                                5.dp
+                            )
+                    )
+
+                    Text(
+
+                        text =
+                            "Xem chi tiết",
+
+                        fontSize =
+                            11.sp,
+
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+
+// ======================================================
+// ĐỌC FIRESTORE
+// ======================================================
+
+private fun readHomeText(
+    document: DocumentSnapshot,
+    field: String
+): String {
+
+    return when (
+        val value =
+            document.get(field)
+    ) {
+
+        null ->
+            ""
+
+        is String ->
+            value
+
+        is Number ->
+            value.toString()
+
+        is Boolean ->
+            value.toString()
+
+        else ->
+            value.toString()
+    }
+}
+
+
+// ======================================================
+// ẢNH MẶC ĐỊNH
+// ======================================================
+
+private fun fallbackImageForCategory(
+    category: String
+): Int {
+
+    return when (
+        category
+            .trim()
+            .lowercase()
+    ) {
+
+        "iphone" ->
+            R.drawable.iphone15promax
+
+        "samsung" ->
+            R.drawable.samsung_s24_ultra
+
+        "xiaomi" ->
+            R.drawable.xiaomi14
+
+        "oppo" ->
+            R.drawable.oppo_reno12
+
+        else ->
+            R.drawable.iphone15promax
+    }
+}
+
+
+// ======================================================
+// FOOTER
+// ======================================================
+
+@Composable
+private fun ModernFooter() {
+
+    Column(
+
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(
+                    Color(0xFF0F172A)
+                )
+                .padding(
+                    20.dp
+                )
+    ) {
+
+        Text(
+
+            text =
+                "PHONE STORE",
+
+            color =
+                Color.White,
+
+            fontSize =
+                22.sp,
+
+            fontWeight =
+                FontWeight.ExtraBold
+        )
+
+        Spacer(
+            modifier =
+                Modifier.height(
+                    4.dp
+                )
+        )
+
+        Text(
+
+            text =
+                "Công nghệ trong tầm tay",
+
+            color =
+                Color(0xFF94A3B8),
+
+            fontSize =
+                12.sp
+        )
+
+        Spacer(
+            modifier =
+                Modifier.height(
+                    20.dp
+                )
+        )
+
+        FooterHeading(
+            "HỆ THỐNG SHOP"
+        )
+
+        Spacer(
+            modifier =
+                Modifier.height(
+                    8.dp
+                )
+        )
+
+        FooterText(
+            "📍 Cơ sở 1: 123 Nguyễn Huệ, TP. Tuy Hòa"
+        )
+
+        FooterText(
+            "📍 Cơ sở 2: 45 Trần Hưng Đạo, TP. Tuy Hòa"
+        )
+
+        FooterText(
+            "☎ Hotline: 0968 207 886"
+        )
+
+        FooterText(
+            "✉ Email: phonestore@gmail.com"
+        )
+
+        Spacer(
+            modifier =
+                Modifier.height(
+                    20.dp
+                )
+        )
+
+        FooterHeading(
+            "CHÍNH SÁCH"
+        )
+
+        Spacer(
+            modifier =
+                Modifier.height(
+                    8.dp
+                )
+        )
+
+        FooterText(
+            "• Chính sách đổi, trả hàng hoàn tiền"
+        )
+
+        FooterText(
+            "• Chính sách bảo hành"
+        )
+
+        FooterText(
+            "• Phương thức thanh toán"
+        )
+
+        FooterText(
+            "• Chính sách giao hàng"
+        )
+
+        FooterText(
+            "• Chính sách kiểm hàng"
+        )
+
+        FooterText(
+            "• Chính sách quyền riêng tư"
+        )
+
+        FooterText(
+            "• Điều khoản sử dụng"
+        )
+
+        Spacer(
+            modifier =
+                Modifier.height(
+                    20.dp
+                )
+        )
+
+        FooterHeading(
+            "THANH TOÁN"
+        )
+
+        Spacer(
+            modifier =
+                Modifier.height(
+                    8.dp
+                )
+        )
+
+        Row(
+            horizontalArrangement =
+                Arrangement.spacedBy(
+                    8.dp
+                )
+        ) {
+
+            FooterBadge("VISA")
+            FooterBadge("MASTER")
+            FooterBadge("COD")
+        }
+
+        Spacer(
+            modifier =
+                Modifier.height(
+                    20.dp
+                )
+        )
+
+        FooterHeading(
+            "KẾT NỐI VỚI CHÚNG TÔI"
+        )
+
+        Spacer(
+            modifier =
+                Modifier.height(
+                    8.dp
+                )
+        )
+
+        Row(
+            horizontalArrangement =
+                Arrangement.spacedBy(
+                    8.dp
+                )
+        ) {
+
+            FooterBadge("Facebook")
+            FooterBadge("YouTube")
+            FooterBadge("Zalo")
+        }
+
+        Spacer(
+            modifier =
+                Modifier.height(
+                    25.dp
+                )
+        )
+
+        Box(
+
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(
+                        1.dp
+                    )
+                    .background(
+                        Color(0xFF334155)
+                    )
+        )
+
+        Spacer(
+            modifier =
+                Modifier.height(
+                    15.dp
+                )
+        )
+
+        Text(
+
+            text =
+                "© 2026 PHONE STORE. Bảo lưu mọi quyền.",
+
+            color =
+                Color(0xFF94A3B8),
+
+            fontSize =
+                10.sp
+        )
+
+        Spacer(
+            modifier =
+                Modifier.height(
+                    5.dp
+                )
+        )
+
+        Text(
+
+            text =
+                "Chính hãng • Giá tốt • Uy tín • Hỗ trợ tận tâm",
+
+            color =
+                Color(0xFF64748B),
+
+            fontSize =
+                10.sp
+        )
+    }
+}
+
+
+// ======================================================
+// FOOTER HEADING
+// ======================================================
+
+@Composable
+private fun FooterHeading(
+    text: String
+) {
+
+    Text(
+
+        text =
+            text,
+
+        color =
+            Color.White,
+
+        fontSize =
+            15.sp,
+
+        fontWeight =
+            FontWeight.ExtraBold
+    )
+}
+
+
+// ======================================================
+// FOOTER TEXT
+// ======================================================
+
+@Composable
+private fun FooterText(
+    text: String
+) {
+
+    Text(
+
+        text =
+            text,
+
+        color =
+            Color(0xFFCBD5E1),
+
+        fontSize =
+            12.sp,
+
+        modifier =
+            Modifier.padding(
+                vertical = 3.dp
+            )
+    )
+}
+
+
+// ======================================================
+// FOOTER BADGE
+// ======================================================
+
+@Composable
+private fun FooterBadge(
+    text: String
+) {
+
+    Surface(
+
+        shape =
+            RoundedCornerShape(
+                9.dp
+            ),
+
+        color =
+            Color(0xFF1E293B)
+    ) {
+
+        Text(
+
+            text =
+                text,
+
+            color =
+                Color.White,
+
+            fontSize =
+                10.sp,
+
+            fontWeight =
+                FontWeight.Bold,
+
+            modifier =
+                Modifier.padding(
+                    horizontal = 11.dp,
+                    vertical = 8.dp
+                )
+        )
+    }
+}
